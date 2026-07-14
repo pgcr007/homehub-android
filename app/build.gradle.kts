@@ -2,7 +2,14 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.gms.google-services")
+    id("com.google.gms.google-services") apply false
+}
+
+// The Google Services plugin requires app/google-services.json, which doesn't exist yet
+// (Firebase/FCM setup is a pending Phase 1 checklist item). Only apply the plugin once
+// that file is actually present, so CI/local builds keep working in the meantime.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 android {
