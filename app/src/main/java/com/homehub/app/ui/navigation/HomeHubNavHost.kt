@@ -5,13 +5,18 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.homehub.app.ui.screens.adddevice.AddDeviceScreen
 import com.homehub.app.ui.screens.dashboard.DashboardScreen
 import com.homehub.app.ui.screens.login.LoginScreen
+import com.homehub.app.ui.screens.activity.ActivityFeedScreen
 
 sealed class Destination(val route: String) {
     data object Login : Destination("login")
     data object Dashboard : Destination("dashboard")
-    // Phase 4 will add device detail, add-device, and rule builder routes here
+    data object AddDevice : Destination("add_device")
+    // Phase 4 will still add device detail and rule builder routes here
+
+    data object ActivityFeed : Destination("activity_feed")
 }
 
 @Composable
@@ -27,7 +32,20 @@ fun HomeHubNavHost(navController: NavHostController = rememberNavController()) {
             )
         }
         composable(Destination.Dashboard.route) {
-            DashboardScreen()
+            DashboardScreen(
+                onAddDevice = { navController.navigate(Destination.AddDevice.route) },
+                onViewActivity = { navController.navigate(Destination.ActivityFeed.route) }
+            )
+        }
+        composable(Destination.AddDevice.route) {
+            AddDeviceScreen(
+                onDone = { navController.popBackStack() },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Destination.ActivityFeed.route) {
+            ActivityFeedScreen(onBack = { navController.popBackStack() })
         }
     }
 }

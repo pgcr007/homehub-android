@@ -50,4 +50,6 @@ object ApiClient {
     }
 
     val authService: AuthService by lazy { retrofit.create(AuthService::class.java) }
+    val deviceService: DeviceService by lazy { retrofit.create(DeviceService::class.java) }
+
 }

@@ -25,7 +25,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Points at the local backend by default; override per build type / local.properties
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:5000/\"")
+        buildConfigField("String", "BASE_URL", "\"https://homehub-backend-k6qj.onrender.com/\"")
     }
 
     buildTypes {
@@ -67,6 +67,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-core")
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.8.5")
@@ -76,6 +77,9 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("io.socket:socket.io-client:2.1.1") {
+        exclude(group = "org.json", module = "json")
+    }
 
     // Firebase (FCM)
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
