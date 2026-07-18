@@ -9,6 +9,8 @@ import com.homehub.app.ui.screens.adddevice.AddDeviceScreen
 import com.homehub.app.ui.screens.dashboard.DashboardScreen
 import com.homehub.app.ui.screens.login.LoginScreen
 import com.homehub.app.ui.screens.activity.ActivityFeedScreen
+import com.homehub.app.ui.screens.rules.RulesListScreen
+import com.homehub.app.ui.screens.rules.CreateRuleScreen
 
 sealed class Destination(val route: String) {
     data object Login : Destination("login")
@@ -17,6 +19,10 @@ sealed class Destination(val route: String) {
     // Phase 4 will still add device detail and rule builder routes here
 
     data object ActivityFeed : Destination("activity_feed")
+
+    data object RulesList : Destination("rules_list")
+
+    data object CreateRule : Destination("create_rule")
 }
 
 @Composable
@@ -34,7 +40,20 @@ fun HomeHubNavHost(navController: NavHostController = rememberNavController()) {
         composable(Destination.Dashboard.route) {
             DashboardScreen(
                 onAddDevice = { navController.navigate(Destination.AddDevice.route) },
-                onViewActivity = { navController.navigate(Destination.ActivityFeed.route) }
+                onViewActivity = { navController.navigate(Destination.ActivityFeed.route) },
+                onViewRules = { navController.navigate(Destination.RulesList.route) }
+            )
+        }
+        composable(Destination.RulesList.route) {
+            RulesListScreen(
+                onBack = { navController.popBackStack() },
+                onCreateRule = { navController.navigate(Destination.CreateRule.route) }
+            )
+        }
+        composable(Destination.CreateRule.route) {
+            CreateRuleScreen(
+                onDone = { navController.popBackStack() },
+                onBack = { navController.popBackStack() }
             )
         }
         composable(Destination.AddDevice.route) {
