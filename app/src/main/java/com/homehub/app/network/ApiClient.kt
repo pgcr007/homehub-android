@@ -16,11 +16,34 @@ object TokenHolder {
     var token: String? = null
 }
 
+/**
+ * Phase 6: every household-scoped endpoint (rooms/devices/events/rules)
+ * requires an X-Household-Id header — this is the Android-side equivalent
+ * of TokenHolder above. Set via bootstrapActiveHousehold() right after
+ * login (see HouseholdBootstrap.kt). In-memory only for now, same
+ * persistence caveat as TokenHolder.
+ */
+object HouseholdHolder {
+    @Volatile
+    var activeHouseholdId: String? = null
+}
+
 private val authInterceptor = Interceptor { chain ->
     val original = chain.request()
     val token = TokenHolder.token
     val request = if (token != null) {
         original.newBuilder().addHeader("Authorization", "Bearer $token").build()
+    } else {
+        original
+    }
+    chain.proceed(request)
+}
+
+private val householdInterceptor = Interceptor { chain ->
+    val original = chain.request()
+    val householdId = HouseholdHolder.activeHouseholdId
+    val request = if (householdId != null) {
+        original.newBuilder().addHeader("X-Household-Id", householdId).build()
     } else {
         original
     }
@@ -37,6 +60,7 @@ private val loggingInterceptor = HttpLoggingInterceptor().apply {
 
 private val okHttpClient = OkHttpClient.Builder()
     .addInterceptor(authInterceptor)
+    .addInterceptor(householdInterceptor)
     .addInterceptor(loggingInterceptor)
     .build()
 
@@ -51,5 +75,5 @@ object ApiClient {
 
     val authService: AuthService by lazy { retrofit.create(AuthService::class.java) }
     val deviceService: DeviceService by lazy { retrofit.create(DeviceService::class.java) }
-
+    val householdService: HouseholdService by lazy { retrofit.create(HouseholdService::class.java) }
 }

@@ -6,8 +6,9 @@ import retrofit2.http.POST
 
 data class LoginRequest(val email: String, val password: String)
 data class RegisterRequest(val email: String, val password: String, val name: String?)
-data class UserDto(val _id: String, val email: String, val name: String?)
+data class UserDto(val _id: String, val email: String, val name: String?, val household: String? = null)
 data class AuthResponse(val token: String, val user: UserDto)
+
 
 interface AuthService {
     @POST("api/auth/login")

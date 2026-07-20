@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.homehub.app.network.ApiClient
 import com.homehub.app.network.LoginRequest
 import com.homehub.app.network.TokenHolder
+import com.homehub.app.network.bootstrapActiveHousehold
 import kotlinx.coroutines.launch
 
 @Composable
@@ -68,9 +69,15 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                     try {
                         val response = ApiClient.authService.login(LoginRequest(email, password))
                         TokenHolder.token = response.token
+                        bootstrapActiveHousehold(response.user.household)
                         onLoginSuccess()
                     } catch (e: Exception) {
                         errorMessage = "Login failed: ${e.message ?: "unknown error"}"
+                        // Note: if login itself succeeded and bootstrapActiveHousehold threw
+                        // (e.g. network blip), TokenHolder.token is already set but no household
+                        // is active yet — every household-scoped call will 400 until they retry.
+                        // Fine for now; Step 4's household switcher will make this recoverable
+                        // without a re-login.
                     } finally {
                         isLoading = false
                     }
