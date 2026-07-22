@@ -26,6 +26,21 @@ object TokenHolder {
 object HouseholdHolder {
     @Volatile
     var activeHouseholdId: String? = null
+
+    @Volatile
+    var activeHouseholdName: String? = null
+
+    // "owner" | "manager" | "member" for the signed-in user in the active
+    // household — drives role-gated UI (e.g. hiding the add/remove-member
+    // controls for a plain member). This is a UI convenience only; the
+    // backend re-checks the role on every request regardless.
+    @Volatile
+    var activeHouseholdRole: String? = null
+}
+
+object UserHolder {
+    @Volatile
+    var userId: String? = null
 }
 
 private val authInterceptor = Interceptor { chain ->

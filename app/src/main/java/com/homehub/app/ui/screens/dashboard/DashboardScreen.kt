@@ -47,6 +47,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.filled.Home
+import com.homehub.app.network.HouseholdHolder
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,15 +56,16 @@ import androidx.compose.material3.TextButton
 fun DashboardScreen(
     onAddDevice: () -> Unit,
     onViewActivity: () -> Unit,
-    viewModel: DashboardViewModel = viewModel(),
-    onViewRules: () -> Unit
+    onViewRules: () -> Unit,
+    onSwitchHousehold: () -> Unit,
+    viewModel: DashboardViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) viewModel.loadData()
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshForPossibleHouseholdChange()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -71,7 +74,12 @@ fun DashboardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("HomeHub") },
+                title = { Text(HouseholdHolder.activeHouseholdName ?: "HomeHub") },
+                navigationIcon = {
+                    IconButton(onClick = onSwitchHousehold) {
+                        Icon(Icons.Filled.Home, contentDescription = "Switch household")
+                    }
+                },
                 actions = {
                     TextButton(onClick = onViewRules) { Text("Rules") }
                     IconButton(onClick = onViewActivity) {

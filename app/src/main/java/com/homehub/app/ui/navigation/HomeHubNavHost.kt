@@ -5,24 +5,25 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.homehub.app.ui.screens.activity.ActivityFeedScreen
 import com.homehub.app.ui.screens.adddevice.AddDeviceScreen
 import com.homehub.app.ui.screens.dashboard.DashboardScreen
+import com.homehub.app.ui.screens.household.HouseholdSwitcherScreen
+import com.homehub.app.ui.screens.household.MembersScreen
 import com.homehub.app.ui.screens.login.LoginScreen
-import com.homehub.app.ui.screens.activity.ActivityFeedScreen
-import com.homehub.app.ui.screens.rules.RulesListScreen
 import com.homehub.app.ui.screens.rules.CreateRuleScreen
+import com.homehub.app.ui.screens.rules.RulesListScreen
 
 sealed class Destination(val route: String) {
     data object Login : Destination("login")
     data object Dashboard : Destination("dashboard")
     data object AddDevice : Destination("add_device")
-    // Phase 4 will still add device detail and rule builder routes here
-
     data object ActivityFeed : Destination("activity_feed")
-
     data object RulesList : Destination("rules_list")
-
     data object CreateRule : Destination("create_rule")
+    // Phase 6 Step 4
+    data object HouseholdSwitcher : Destination("household_switcher")
+    data object Members : Destination("members")
 }
 
 @Composable
@@ -41,7 +42,19 @@ fun HomeHubNavHost(navController: NavHostController = rememberNavController()) {
             DashboardScreen(
                 onAddDevice = { navController.navigate(Destination.AddDevice.route) },
                 onViewActivity = { navController.navigate(Destination.ActivityFeed.route) },
-                onViewRules = { navController.navigate(Destination.RulesList.route) }
+                onViewRules = { navController.navigate(Destination.RulesList.route) },
+                onSwitchHousehold = { navController.navigate(Destination.HouseholdSwitcher.route) }
+            )
+        }
+        composable(Destination.AddDevice.route) {
+            AddDeviceScreen(
+                onDone = { navController.popBackStack() },
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(Destination.ActivityFeed.route) {
+            ActivityFeedScreen(
+                onBack = { navController.popBackStack() }
             )
         }
         composable(Destination.RulesList.route) {
@@ -56,15 +69,17 @@ fun HomeHubNavHost(navController: NavHostController = rememberNavController()) {
                 onBack = { navController.popBackStack() }
             )
         }
-        composable(Destination.AddDevice.route) {
-            AddDeviceScreen(
-                onDone = { navController.popBackStack() },
-                onBack = { navController.popBackStack() }
+        composable(Destination.HouseholdSwitcher.route) {
+            HouseholdSwitcherScreen(
+                onBack = { navController.popBackStack() },
+                onSelected = { navController.popBackStack() },
+                onManageMembers = { navController.navigate(Destination.Members.route) }
             )
         }
-
-        composable(Destination.ActivityFeed.route) {
-            ActivityFeedScreen(onBack = { navController.popBackStack() })
+        composable(Destination.Members.route) {
+            MembersScreen(
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

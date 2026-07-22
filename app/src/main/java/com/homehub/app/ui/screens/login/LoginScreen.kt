@@ -23,6 +23,7 @@ import com.homehub.app.network.LoginRequest
 import com.homehub.app.network.TokenHolder
 import com.homehub.app.network.bootstrapActiveHousehold
 import kotlinx.coroutines.launch
+import com.homehub.app.network.UserHolder
 
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit) {
@@ -69,15 +70,17 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                     try {
                         val response = ApiClient.authService.login(LoginRequest(email, password))
                         TokenHolder.token = response.token
+                        UserHolder.userId = response.user._id
                         bootstrapActiveHousehold(response.user.household)
                         onLoginSuccess()
                     } catch (e: Exception) {
                         errorMessage = "Login failed: ${e.message ?: "unknown error"}"
                         // Note: if login itself succeeded and bootstrapActiveHousehold threw
-                        // (e.g. network blip), TokenHolder.token is already set but no household
-                        // is active yet — every household-scoped call will 400 until they retry.
-                        // Fine for now; Step 4's household switcher will make this recoverable
-                        // without a re-login.
+                        // (e.g. network blip), TokenHolder.token/UserHolder.userId are already
+                        // set but no household is active yet — every household-scoped call
+                        // will 400 until they retry. The household switcher (Step 4) can now
+                        // recover this without a re-login, but the dashboard itself would need
+                        // to tolerate landing with no active household first; not handled here.
                     } finally {
                         isLoading = false
                     }

@@ -26,7 +26,26 @@ class DashboardViewModel : ViewModel() {
 
     init {
         loadData()
-        connectLiveUpdates()
+        // The SharedFlow subscription is started exactly once, for the
+        // ViewModel's whole lifetime — SocketManager.connect() itself is
+        // safe to call again later (see refreshForPossibleHouseholdChange),
+        // but re-launching this collect() on every resume would create a
+        // new duplicate collector each time.
+        viewModelScope.launch {
+            SocketManager.events.collect { event ->
+                _uiState.update { current ->
+                    val updatedDevices = current.devices.map { device ->
+                        if (device._id != event.deviceId) return@map device
+                        device.copy(
+                            state = event.state?.let { device.state + it } ?: device.state,
+                            status = event.status ?: device.status
+                        )
+                    }
+                    current.copy(devices = updatedDevices)
+                }
+            }
+        }
+        SocketManager.connect()
     }
 
     fun loadData() {
@@ -48,22 +67,16 @@ class DashboardViewModel : ViewModel() {
         }
     }
 
-    private fun connectLiveUpdates() {
+    /**
+     * Call on every screen resume, not just after returning from the
+     * household switcher — cheap either way, since both loadData() and
+     * SocketManager.connect() are no-ops/idempotent when nothing actually
+     * changed. Reloads REST data for whatever the active household
+     * currently is, and reconnects the socket if it changed underneath us.
+     */
+    fun refreshForPossibleHouseholdChange() {
+        loadData()
         SocketManager.connect()
-        viewModelScope.launch {
-            SocketManager.events.collect { event ->
-                _uiState.update { current ->
-                    val updatedDevices = current.devices.map { device ->
-                        if (device._id != event.deviceId) return@map device
-                        device.copy(
-                            state = event.state?.let { device.state + it } ?: device.state,
-                            status = event.status ?: device.status
-                        )
-                    }
-                    current.copy(devices = updatedDevices)
-                }
-            }
-        }
     }
 
     fun sendCommand(device: DeviceDto, command: Map<String, Any>) {
