@@ -6,6 +6,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 
 /**
  * Holds the bearer token in memory for the session.
@@ -20,7 +21,8 @@ object TokenHolder {
  * Phase 6: every household-scoped endpoint (rooms/devices/events/rules)
  * requires an X-Household-Id header — this is the Android-side equivalent
  * of TokenHolder above. Set via bootstrapActiveHousehold() right after
- * login (see HouseholdBootstrap.kt). In-memory only for now, same
+ * login, and updated again by the household switcher (Step 4) when the
+ * user picks a different household. In-memory only for now, same
  * persistence caveat as TokenHolder.
  */
 object HouseholdHolder {
@@ -38,6 +40,11 @@ object HouseholdHolder {
     var activeHouseholdRole: String? = null
 }
 
+/**
+ * The signed-in user's own id. Needed so member-management UI can tell
+ * "this row is me" apart from other members (e.g. to hide the remove
+ * button on your own row) without a dedicated /whoami round trip.
+ */
 object UserHolder {
     @Volatile
     var userId: String? = null
@@ -77,6 +84,16 @@ private val okHttpClient = OkHttpClient.Builder()
     .addInterceptor(authInterceptor)
     .addInterceptor(householdInterceptor)
     .addInterceptor(loggingInterceptor)
+    // Render's free tier spins the backend down after inactivity; the first
+    // request after a cold spell can take 30-50s to get a response while it
+    // wakes up. OkHttp's default 10s read timeout was firing a
+    // SocketTimeoutException on exactly that first login attempt, which
+    // surfaced to the user as an opaque "timeout" message. 60s comfortably
+    // covers a cold start without leaving a genuinely-dead connection
+    // hanging for a full minute.
+    .connectTimeout(60, TimeUnit.SECONDS)
+    .readTimeout(60, TimeUnit.SECONDS)
+    .writeTimeout(60, TimeUnit.SECONDS)
     .build()
 
 object ApiClient {

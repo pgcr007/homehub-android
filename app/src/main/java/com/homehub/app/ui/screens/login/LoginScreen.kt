@@ -41,6 +41,9 @@ import com.homehub.app.ui.components.ErrorMessage
 import com.homehub.app.ui.components.HomeHubCard
 import com.homehub.app.ui.theme.spacing
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
+import java.io.IOException
+import java.net.SocketTimeoutException
 
 /**
  * Phase 7 Step 2 (polish pass). First screen anyone sees, so it's the one
@@ -141,6 +144,23 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                                 UserHolder.userId = response.user._id
                                 bootstrapActiveHousehold(response.user.household)
                                 onLoginSuccess()
+                            } catch (e: HttpException) {
+                                // 401 here specifically means the credentials were rejected —
+                                // the raw "HTTP 401" that used to show wasn't wrong, just
+                                // unhelpful to anyone who isn't reading server logs.
+                                errorMessage = if (e.code() == 401) {
+                                    "Invalid email or password"
+                                } else {
+                                    "Login failed (server said ${e.code()}). Please try again."
+                                }
+                            } catch (e: SocketTimeoutException) {
+                                // Render's free tier spins the backend down after inactivity;
+                                // the first request after a cold spell can take 30-50s to wake
+                                // it up. Even with the 60s client timeout (see ApiClient), a
+                                // slow or dead connection can still exceed it.
+                                errorMessage = "The server is taking a while to respond — it may be waking up. Please try again in a moment."
+                            } catch (e: IOException) {
+                                errorMessage = "Can't reach the server. Check your connection and try again."
                             } catch (e: Exception) {
                                 errorMessage = "Login failed: ${e.message ?: "unknown error"}"
                                 // Note: if login itself succeeded and bootstrapActiveHousehold threw
