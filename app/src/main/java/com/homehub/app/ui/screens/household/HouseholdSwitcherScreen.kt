@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.homehub.app.network.HouseholdDto
+import com.homehub.app.ui.components.ErrorMessage
 import com.homehub.app.ui.components.HomeHubCard
 import com.homehub.app.ui.components.HomeHubHeader
 import com.homehub.app.ui.theme.spacing
@@ -66,7 +67,7 @@ fun HouseholdSwitcherScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            Icons.Filled.ArrowBack,
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
@@ -95,9 +96,8 @@ fun HouseholdSwitcherScreen(
             else -> {
                 Column(modifier = Modifier.fillMaxSize().padding(padding)) {
                     if (uiState.errorMessage != null) {
-                        Text(
-                            uiState.errorMessage ?: "",
-                            color = MaterialTheme.colorScheme.error,
+                        ErrorMessage(
+                            message = uiState.errorMessage ?: "",
                             modifier = Modifier.padding(MaterialTheme.spacing.lg)
                         )
                     }

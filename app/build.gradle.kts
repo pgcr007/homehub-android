@@ -71,6 +71,9 @@ dependencies {
     // Core / Compose
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    // Phase 7 Step 4: non-deprecated LocalLifecycleOwner lives here, not in
+    // androidx.compose.ui.platform (which CI flagged as deprecated).
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
     // Fixes lint's InvalidFragmentVersionForActivityResult false positive on
     // MainActivity's registerForActivityResult() call (Phase 1's notification

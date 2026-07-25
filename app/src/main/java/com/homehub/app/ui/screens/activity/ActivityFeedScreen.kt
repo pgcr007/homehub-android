@@ -16,7 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Sensors
@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.homehub.app.ui.components.EmptyState
+import com.homehub.app.ui.components.ErrorMessage
 import com.homehub.app.ui.components.HomeHubCard
 import com.homehub.app.ui.components.HomeHubHeader
 import com.homehub.app.ui.theme.spacing
@@ -59,7 +60,7 @@ fun ActivityFeedScreen(
                 title = "Activity",
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
             )
@@ -81,9 +82,8 @@ fun ActivityFeedScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text(
+                    ErrorMessage(
                         "Couldn't load activity: ${uiState.error}",
-                        color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(MaterialTheme.spacing.xl)
                     )
                 }

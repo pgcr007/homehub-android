@@ -37,6 +37,7 @@ import com.homehub.app.network.LoginRequest
 import com.homehub.app.network.TokenHolder
 import com.homehub.app.network.UserHolder
 import com.homehub.app.network.bootstrapActiveHousehold
+import com.homehub.app.ui.components.ErrorMessage
 import com.homehub.app.ui.components.HomeHubCard
 import com.homehub.app.ui.theme.spacing
 import kotlinx.coroutines.launch
@@ -123,10 +124,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 )
 
                 errorMessage?.let {
-                    Text(
-                        it,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
+                    ErrorMessage(
+                        message = it,
                         modifier = Modifier.padding(top = MaterialTheme.spacing.sm)
                     )
                 }

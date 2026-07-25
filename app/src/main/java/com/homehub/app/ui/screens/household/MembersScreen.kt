@@ -13,7 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.homehub.app.network.HouseholdMemberDto
 import com.homehub.app.network.UserHolder
+import com.homehub.app.ui.components.ErrorMessage
 import com.homehub.app.ui.components.HomeHubCard
 import com.homehub.app.ui.components.HomeHubHeader
 import com.homehub.app.ui.components.InitialsAvatar
@@ -74,7 +75,7 @@ fun MembersScreen(
                 subtitle = if (memberCount > 0) "$memberCount member${if (memberCount == 1) "" else "s"}" else null,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
             )
@@ -102,9 +103,8 @@ fun MembersScreen(
             else -> {
                 Column(modifier = Modifier.fillMaxSize().padding(padding)) {
                     if (uiState.error != null) {
-                        Text(
-                            uiState.error ?: "",
-                            color = MaterialTheme.colorScheme.error,
+                        ErrorMessage(
+                            message = uiState.error ?: "",
                             modifier = Modifier.padding(MaterialTheme.spacing.lg)
                         )
                     }

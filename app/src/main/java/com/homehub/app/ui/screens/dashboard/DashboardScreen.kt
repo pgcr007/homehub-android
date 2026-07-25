@@ -40,14 +40,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.homehub.app.network.DeviceDto
 import com.homehub.app.network.HouseholdHolder
 import com.homehub.app.ui.components.DeviceIcon
+import com.homehub.app.ui.components.ErrorMessage
 import com.homehub.app.ui.components.HomeHubCard
 import com.homehub.app.ui.components.HomeHubHeader
 import com.homehub.app.ui.components.StatusBadge
@@ -144,9 +145,8 @@ fun DashboardScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 uiState.error != null -> {
-                    Text(
+                    ErrorMessage(
                         "Couldn't load dashboard: ${uiState.error}",
-                        color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.align(Alignment.Center).padding(MaterialTheme.spacing.xl)
                     )
                 }

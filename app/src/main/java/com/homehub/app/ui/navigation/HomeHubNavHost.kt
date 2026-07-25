@@ -1,10 +1,16 @@
 package com.homehub.app.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -15,10 +21,14 @@ import com.homehub.app.ui.screens.dashboard.DashboardScreen
 import com.homehub.app.ui.screens.household.HouseholdSwitcherScreen
 import com.homehub.app.ui.screens.household.MembersScreen
 import com.homehub.app.ui.screens.login.LoginScreen
+import com.homehub.app.ui.screens.onboarding.OnboardingPrefs
+import com.homehub.app.ui.screens.onboarding.OnboardingScreen
 import com.homehub.app.ui.screens.rules.CreateRuleScreen
 import com.homehub.app.ui.screens.rules.RulesListScreen
 
 sealed class Destination(val route: String) {
+    // Phase 7 Step 3
+    data object Onboarding : Destination("onboarding")
     data object Login : Destination("login")
     data object Dashboard : Destination("dashboard")
     data object AddDevice : Destination("add_device")
@@ -29,6 +39,20 @@ sealed class Destination(val route: String) {
     data object HouseholdSwitcher : Destination("household_switcher")
     data object Members : Destination("members")
 }
+
+// Phase 7 Step 4: shared transition specs so every screen slides in the same
+// way instead of the default hard cut — 250ms, standard forward/back slide
+// with a fade, matching the platform's own feel without pulling in a full
+// custom animation per screen.
+private const val TRANSITION_MS = 250
+private val enterTransition = slideInHorizontally(animationSpec = tween(TRANSITION_MS)) { it / 4 } +
+        fadeIn(animationSpec = tween(TRANSITION_MS))
+private val exitTransition = slideOutHorizontally(animationSpec = tween(TRANSITION_MS)) { -it / 4 } +
+        fadeOut(animationSpec = tween(TRANSITION_MS))
+private val popEnterTransition = slideInHorizontally(animationSpec = tween(TRANSITION_MS)) { -it / 4 } +
+        fadeIn(animationSpec = tween(TRANSITION_MS))
+private val popExitTransition = slideOutHorizontally(animationSpec = tween(TRANSITION_MS)) { it / 4 } +
+        fadeOut(animationSpec = tween(TRANSITION_MS))
 
 /**
  * Phase 7 bugfix: root cause of "double-tap anything nav-related -> screen
@@ -59,7 +83,37 @@ fun HomeHubNavHost(navController: NavHostController = rememberNavController()) {
         }
     }
 
-    NavHost(navController = navController, startDestination = Destination.Login.route) {
+    // Phase 7 Step 3: onboarding only shows once per install. Read the flag
+    // once at first composition (`remember`, not on every recomposition) —
+    // this is intentionally NOT reactive to the flag changing later in this
+    // same process, since the only writer (OnboardingScreen's onDone) also
+    // immediately navigates away, so nothing here needs to react afterward.
+    val context = LocalContext.current
+    val startDestination = remember {
+        if (OnboardingPrefs.hasSeenOnboarding(context)) Destination.Login.route else Destination.Onboarding.route
+    }
+
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
+        enterTransition = { enterTransition },
+        exitTransition = { exitTransition },
+        popEnterTransition = { popEnterTransition },
+        popExitTransition = { popExitTransition }
+    ) {
+        composable(Destination.Onboarding.route) {
+            OnboardingScreen(
+                onDone = {
+                    debounced {
+                        OnboardingPrefs.markOnboardingSeen(context)
+                        navController.navigate(Destination.Login.route) {
+                            popUpTo(Destination.Onboarding.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                }
+            )
+        }
         composable(Destination.Login.route) {
             LoginScreen(
                 onLoginSuccess = {
