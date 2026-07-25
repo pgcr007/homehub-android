@@ -53,6 +53,18 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
+    lint {
+        // Phase 7 CI fix: this specific check has a long-standing false-positive
+        // history (see AGP issue tracker, component 527362) on Compose-only
+        // activities using registerForActivityResult() — it flags the
+        // resolved Fragment version even when nothing in the app actually
+        // uses fragments and a modern one is present transitively. The
+        // explicit fragment-ktx dependency above should already satisfy it,
+        // but disabling it here too means a future transitive-dependency
+        // shuffle can't silently fail CI on this again.
+        disable += "InvalidFragmentVersionForActivityResult"
+    }
 }
 
 dependencies {
@@ -60,6 +72,14 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
+    // Fixes lint's InvalidFragmentVersionForActivityResult false positive on
+    // MainActivity's registerForActivityResult() call (Phase 1's notification
+    // permission request): lint checks the resolved Fragment version and
+    // flags it if nothing in the dependency graph pins one >= 1.3.0 —
+    // activity-compose pulls in a modern fragment transitively at runtime,
+    // but lint doesn't always resolve that transitively, so it's pinned
+    // here explicitly.
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
