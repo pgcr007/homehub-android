@@ -1,18 +1,22 @@
 package com.homehub.app.ui.screens.adddevice
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -26,7 +30,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,13 +38,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.homehub.app.network.DeviceTypeOption
 import com.homehub.app.network.DEVICE_TYPE_OPTIONS
+import com.homehub.app.network.DeviceTypeOption
 import com.homehub.app.network.RoomDto
+import com.homehub.app.ui.components.HomeHubCard
+import com.homehub.app.ui.components.HomeHubHeader
+import com.homehub.app.ui.theme.spacing
 
+private const val NEW_ROOM_SENTINEL = "__new_room__"
+
+/**
+ * Phase 7 Step 2 (polish pass): shared `HomeHubHeader`; the form fields
+ * and the webhook-credentials callout both now sit inside `HomeHubCard`
+ * sections instead of a bare Column / plain Card, and the success screen
+ * leads with a check-circle icon instead of just a text heading. No
+ * behavioral change — same ViewModel, same submit flow.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddDeviceScreen(
@@ -53,11 +69,11 @@ fun AddDeviceScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Add Device") },
+            HomeHubHeader(
+                title = "Add device",
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
             )
@@ -94,43 +110,47 @@ private fun AddDeviceForm(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(MaterialTheme.spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg)
     ) {
-        OutlinedTextField(
-            value = uiState.name,
-            onValueChange = viewModel::onNameChange,
-            label = { Text("Name") },
-            placeholder = { Text("e.g. Living Room Lamp") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
+        HomeHubCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg)) {
+                OutlinedTextField(
+                    value = uiState.name,
+                    onValueChange = viewModel::onNameChange,
+                    label = { Text("Name") },
+                    placeholder = { Text("e.g. Living Room Lamp") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
 
-        DeviceTypeDropdown(
-            selected = uiState.selectedType,
-            onSelect = viewModel::onTypeChange
-        )
+                DeviceTypeDropdown(
+                    selected = uiState.selectedType,
+                    onSelect = viewModel::onTypeChange
+                )
 
-        OutlinedTextField(
-            value = uiState.identifier,
-            onValueChange = viewModel::onIdentifierChange,
-            label = { Text("Identifier") },
-            supportingText = { Text(uiState.selectedType.identifierHint) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
+                OutlinedTextField(
+                    value = uiState.identifier,
+                    onValueChange = viewModel::onIdentifierChange,
+                    label = { Text("Identifier") },
+                    supportingText = { Text(uiState.selectedType.identifierHint) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
 
-        RoomDropdown(
-            rooms = uiState.rooms,
-            selectedRoomId = uiState.selectedRoomId,
-            isCreatingRoom = uiState.isCreatingRoom,
-            newRoomName = uiState.newRoomName,
-            onRoomSelected = viewModel::onRoomSelected,
-            onStartCreatingRoom = { viewModel.toggleCreatingRoom(true) },
-            onCancelCreatingRoom = { viewModel.toggleCreatingRoom(false) },
-            onNewRoomNameChange = viewModel::onNewRoomNameChange,
-            onCreateRoom = viewModel::createRoom
-        )
+                RoomDropdown(
+                    rooms = uiState.rooms,
+                    selectedRoomId = uiState.selectedRoomId,
+                    isCreatingRoom = uiState.isCreatingRoom,
+                    newRoomName = uiState.newRoomName,
+                    onRoomSelected = viewModel::onRoomSelected,
+                    onStartCreatingRoom = { viewModel.toggleCreatingRoom(true) },
+                    onCancelCreatingRoom = { viewModel.toggleCreatingRoom(false) },
+                    onNewRoomNameChange = viewModel::onNewRoomNameChange,
+                    onCreateRoom = viewModel::createRoom
+                )
+            }
+        }
 
         if (uiState.error != null) {
             Text(uiState.error, color = MaterialTheme.colorScheme.error)
@@ -142,7 +162,7 @@ private fun AddDeviceForm(
             modifier = Modifier.fillMaxWidth()
         ) {
             if (uiState.isSubmitting) {
-                CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
+                CircularProgressIndicator(modifier = Modifier.padding(end = MaterialTheme.spacing.sm))
             }
             Text("Add Device")
         }
@@ -206,7 +226,7 @@ private fun RoomDropdown(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)
         ) {
             OutlinedTextField(
                 value = newRoomName,
@@ -282,14 +302,29 @@ private fun DeviceAddedConfirmation(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(MaterialTheme.spacing.lg),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg)
     ) {
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.CheckCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(40.dp)
+            )
+        }
         Text("\"$deviceName\" added", style = MaterialTheme.typography.titleLarge)
 
         if (webhookUrl != null && webhookSecret != null) {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            HomeHubCard(modifier = Modifier.fillMaxWidth()) {
+                Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
                     Text(
                         "This device uses the webhook protocol. Configure the vendor with:",
                         style = MaterialTheme.typography.bodyMedium

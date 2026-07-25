@@ -10,8 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -26,7 +26,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,11 +34,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.homehub.app.network.CLAUSE_OPERATORS
 import com.homehub.app.network.DeviceDto
+import com.homehub.app.ui.components.HomeHubCard
+import com.homehub.app.ui.components.HomeHubHeader
+import com.homehub.app.ui.theme.spacing
 
+/**
+ * Phase 7 Step 2 (polish pass): shared `HomeHubHeader`; clause/action rows
+ * and the conflict-warning callout now use `HomeHubCard` instead of a bare
+ * `Card`. No logic changed from Phase 5/6 — same ViewModel, same rule
+ * validation/conflict-check flow.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateRuleScreen(
@@ -51,11 +58,11 @@ fun CreateRuleScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("New Rule") },
+            HomeHubHeader(
+                title = "New rule",
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
             )
@@ -79,8 +86,8 @@ private fun RuleForm(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .padding(MaterialTheme.spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xl)
     ) {
         OutlinedTextField(
             value = uiState.name,
@@ -146,7 +153,7 @@ private fun RuleForm(
             modifier = Modifier.fillMaxWidth()
         ) {
             if (uiState.isSubmitting) {
-                CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
+                CircularProgressIndicator(modifier = Modifier.padding(end = MaterialTheme.spacing.sm))
             }
             Text("Create Rule")
         }
@@ -163,43 +170,44 @@ private fun ClauseEditor(
 ) {
     val selectedDevice = devices.find { it._id == form.deviceId }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (trailing != null) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    trailing()
-                }
+    HomeHubCard(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)
+    ) {
+        if (trailing != null) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                trailing()
             }
-            LabeledDropdown(
-                label = "Device",
-                selectedLabel = selectedDevice?.name ?: "Select a device",
-                options = devices,
-                optionLabel = { it.name },
-                onSelect = { onChange(form.copy(deviceId = it._id, capability = "")) }
+        }
+        LabeledDropdown(
+            label = "Device",
+            selectedLabel = selectedDevice?.name ?: "Select a device",
+            options = devices,
+            optionLabel = { it.name },
+            onSelect = { onChange(form.copy(deviceId = it._id, capability = "")) }
+        )
+        LabeledDropdown(
+            label = "Capability",
+            selectedLabel = form.capability.ifBlank { "Select a capability" },
+            options = selectedDevice?.capabilities ?: emptyList(),
+            optionLabel = { it },
+            onSelect = { onChange(form.copy(capability = it)) }
+        )
+        LabeledDropdown(
+            label = "Operator",
+            selectedLabel = CLAUSE_OPERATORS.find { it.first == form.operator }?.second ?: form.operator,
+            options = CLAUSE_OPERATORS,
+            optionLabel = { it.second },
+            onSelect = { onChange(form.copy(operator = it.first)) }
+        )
+        if (form.operator != "changed") {
+            OutlinedTextField(
+                value = form.value,
+                onValueChange = { onChange(form.copy(value = it)) },
+                label = { Text("Value") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
-            LabeledDropdown(
-                label = "Capability",
-                selectedLabel = form.capability.ifBlank { "Select a capability" },
-                options = selectedDevice?.capabilities ?: emptyList(),
-                optionLabel = { it },
-                onSelect = { onChange(form.copy(capability = it)) }
-            )
-            LabeledDropdown(
-                label = "Operator",
-                selectedLabel = CLAUSE_OPERATORS.find { it.first == form.operator }?.second ?: form.operator,
-                options = CLAUSE_OPERATORS,
-                optionLabel = { it.second },
-                onSelect = { onChange(form.copy(operator = it.first)) }
-            )
-            if (form.operator != "changed") {
-                OutlinedTextField(
-                    value = form.value,
-                    onValueChange = { onChange(form.copy(value = it)) },
-                    label = { Text("Value") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-            }
         }
     }
 }
@@ -214,52 +222,53 @@ private fun ActionEditor(
 ) {
     val selectedDevice = devices.find { it._id == form.deviceId }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (trailing != null) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    trailing()
+    HomeHubCard(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)
+    ) {
+        if (trailing != null) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                trailing()
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
+            listOf("device_command" to "Control Device", "notify" to "Send Notification").forEach { (value, label) ->
+                if (form.type == value) {
+                    Button(onClick = { onChange(form.copy(type = value)) }) { Text(label) }
+                } else {
+                    OutlinedButton(onClick = { onChange(form.copy(type = value)) }) { Text(label) }
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("device_command" to "Control Device", "notify" to "Send Notification").forEach { (value, label) ->
-                    if (form.type == value) {
-                        Button(onClick = { onChange(form.copy(type = value)) }) { Text(label) }
-                    } else {
-                        OutlinedButton(onClick = { onChange(form.copy(type = value)) }) { Text(label) }
-                    }
-                }
-            }
-            if (form.type == "device_command") {
-                LabeledDropdown(
-                    label = "Device",
-                    selectedLabel = selectedDevice?.name ?: "Select a device",
-                    options = devices,
-                    optionLabel = { it.name },
-                    onSelect = { onChange(form.copy(deviceId = it._id, capability = "")) }
-                )
-                LabeledDropdown(
-                    label = "Capability",
-                    selectedLabel = form.capability.ifBlank { "Select a capability" },
-                    options = selectedDevice?.capabilities ?: emptyList(),
-                    optionLabel = { it },
-                    onSelect = { onChange(form.copy(capability = it)) }
-                )
-                OutlinedTextField(
-                    value = form.value,
-                    onValueChange = { onChange(form.copy(value = it)) },
-                    label = { Text("Value") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-            } else {
-                OutlinedTextField(
-                    value = form.message,
-                    onValueChange = { onChange(form.copy(message = it)) },
-                    label = { Text("Message") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+        }
+        if (form.type == "device_command") {
+            LabeledDropdown(
+                label = "Device",
+                selectedLabel = selectedDevice?.name ?: "Select a device",
+                options = devices,
+                optionLabel = { it.name },
+                onSelect = { onChange(form.copy(deviceId = it._id, capability = "")) }
+            )
+            LabeledDropdown(
+                label = "Capability",
+                selectedLabel = form.capability.ifBlank { "Select a capability" },
+                options = selectedDevice?.capabilities ?: emptyList(),
+                optionLabel = { it },
+                onSelect = { onChange(form.copy(capability = it)) }
+            )
+            OutlinedTextField(
+                value = form.value,
+                onValueChange = { onChange(form.copy(value = it)) },
+                label = { Text("Value") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+        } else {
+            OutlinedTextField(
+                value = form.message,
+                onValueChange = { onChange(form.copy(message = it)) },
+                label = { Text("Message") },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
@@ -316,21 +325,29 @@ private fun CreatedConfirmation(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(MaterialTheme.spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg)
     ) {
-        Text("Rule created", style = MaterialTheme.typography.titleLarge)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Text(
+                "Rule created",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(start = MaterialTheme.spacing.sm)
+            )
+        }
 
         if (!warnings.isNullOrEmpty()) {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "Heads up — this rule may conflict with an existing one:",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    warnings.forEach { warning ->
-                        Text("• $warning", style = MaterialTheme.typography.bodySmall)
-                    }
+            HomeHubCard(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)
+            ) {
+                Text(
+                    "Heads up — this rule may conflict with an existing one:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                warnings.forEach { warning ->
+                    Text("• $warning", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }

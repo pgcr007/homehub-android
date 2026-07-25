@@ -25,6 +25,9 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Points at the local backend by default; override per build type / local.properties
+        // Points at the live Render backend for now (matches current manual
+        // testing setup). Swap back to "http://10.0.2.2:5000/" for local
+        // backend dev against the emulator.
         buildConfigField("String", "BASE_URL", "\"https://homehub-backend-k6qj.onrender.com/\"")
     }
 
@@ -57,17 +60,16 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
-    // Explicit pin: something in the dependency graph (likely a Firebase/Play
-    // Services artifact) was resolving an older transitive androidx.fragment,
-    // which fails lint's InvalidFragmentVersionForActivityResult check for our
-    // registerForActivityResult() permission call in MainActivity.
-    implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-core")
+    // Phase 7 Step 2 polish: device-type icons (Lightbulb, Thermostat, Sensors,
+    // Power) live in the extended set, not core. Same compose-bom, no separate
+    // version needed.
+    implementation("androidx.compose.material:material-icons-extended")
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.8.5")
