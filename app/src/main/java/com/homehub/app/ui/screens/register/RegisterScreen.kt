@@ -1,4 +1,4 @@
-package com.homehub.app.ui.screens.login
+package com.homehub.app.ui.screens.register
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -34,7 +34,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.homehub.app.R
 import com.homehub.app.network.ApiClient
-import com.homehub.app.network.LoginRequest
+import com.homehub.app.network.RegisterRequest
 import com.homehub.app.network.TokenHolder
 import com.homehub.app.network.UserHolder
 import com.homehub.app.network.bootstrapActiveHousehold
@@ -47,15 +47,20 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 
 /**
- * Phase 7 Step 2 (polish pass). First screen anyone sees, so it's the one
- * that most needed to stop looking like unstyled Compose defaults: a full
- * gradient background (brand blue, matching HomeHubHeader elsewhere in the
- * app), a circular logo mark, a tagline, and the form itself lifted onto a
- * `HomeHubCard` instead of floating directly on the background. No logic
- * changed — same ApiClient call, same bootstrapActiveHousehold flow.
+ * Companion to LoginScreen — the backend has always had a working
+ * POST /api/auth/register (see authController.js) and AuthService already
+ * declared register() in its Retrofit interface, but no screen ever called
+ * it. Styling deliberately mirrors LoginScreen (same gradient, logo, card)
+ * so the two feel like one flow rather than a bolted-on afterthought.
+ *
+ * Same post-auth path as login: store the token/userId, then run
+ * bootstrapActiveHousehold(null) — a brand-new user has no household yet
+ * (register doesn't return one), so this always falls to the "create a new
+ * 'My Home' household" branch, giving every fresh account somewhere to land.
  */
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit, onRegister: () -> Unit) {
+fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
+    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -87,7 +92,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onRegister: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.md))
             Text(
-                "HomeHub",
+                "Create your account",
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.onPrimary
             )
@@ -104,6 +109,14 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onRegister: () -> Unit) {
                 contentPadding = PaddingValues(MaterialTheme.spacing.xl)
             ) {
                 OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name (optional)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.height(MaterialTheme.spacing.md))
+                OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
                     label = { Text("Email") },
@@ -115,6 +128,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onRegister: () -> Unit) {
                     value = password,
                     onValueChange = { password = it },
                     label = { Text("Password") },
+                    supportingText = { Text("At least 8 characters") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation()
@@ -130,39 +144,40 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onRegister: () -> Unit) {
                 Button(
                     onClick = {
                         errorMessage = null
+                        if (password.length < 8) {
+                            errorMessage = "Password must be at least 8 characters"
+                            return@Button
+                        }
                         isLoading = true
                         scope.launch {
                             try {
-                                val response = ApiClient.authService.login(LoginRequest(email, password))
+                                val response = ApiClient.authService.register(
+                                    RegisterRequest(
+                                        email = email,
+                                        password = password,
+                                        name = name.ifBlank { null }
+                                    )
+                                )
                                 TokenHolder.token = response.token
                                 UserHolder.userId = response.user._id
                                 bootstrapActiveHousehold(response.user.household)
-                                onLoginSuccess()
+                                onRegisterSuccess()
                             } catch (e: HttpException) {
-                                // 401 here specifically means the credentials were rejected —
-                                // the raw "HTTP 401" that used to show wasn't wrong, just
-                                // unhelpful to anyone who isn't reading server logs.
-                                errorMessage = if (e.code() == 401) {
-                                    "Invalid email or password"
-                                } else {
-                                    "Login failed (server said ${e.code()}). Please try again."
+                                // 409 = email already registered (see authController.register);
+                                // 400 = missing/short fields, though the client-side length
+                                // check above should catch the password case first.
+                                errorMessage = when (e.code()) {
+                                    409 -> "An account with that email already exists"
+                                    400 -> "Please check your email and password"
+                                    else -> "Registration failed (server said ${e.code()}). Please try again."
                                 }
                             } catch (e: SocketTimeoutException) {
-                                // Render's free tier spins the backend down after inactivity;
-                                // the first request after a cold spell can take 30-50s to wake
-                                // it up. Even with the 60s client timeout (see ApiClient), a
-                                // slow or dead connection can still exceed it.
+                                // Same Render cold-start behavior as LoginScreen.
                                 errorMessage = "The server is taking a while to respond — it may be waking up. Please try again in a moment."
                             } catch (e: IOException) {
                                 errorMessage = "Can't reach the server. Check your connection and try again."
                             } catch (e: Exception) {
-                                errorMessage = "Login failed: ${e.message ?: "unknown error"}"
-                                // Note: if login itself succeeded and bootstrapActiveHousehold threw
-                                // (e.g. network blip), TokenHolder.token/UserHolder.userId are already
-                                // set but no household is active yet — every household-scoped call
-                                // will 400 until they retry. The household switcher (Step 4) can now
-                                // recover this without a re-login, but the dashboard itself would need
-                                // to tolerate landing with no active household first; not handled here.
+                                errorMessage = "Registration failed: ${e.message ?: "unknown error"}"
                             } finally {
                                 isLoading = false
                             }
@@ -176,16 +191,16 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onRegister: () -> Unit) {
                     if (isLoading) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp))
                     } else {
-                        Text("Log in")
+                        Text("Create account")
                     }
                 }
 
                 TextButton(
-                    onClick = onRegister,
+                    onClick = onBackToLogin,
                     enabled = !isLoading,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Don't have an account? Sign up")
+                    Text("Already have an account? Log in")
                 }
             }
         }

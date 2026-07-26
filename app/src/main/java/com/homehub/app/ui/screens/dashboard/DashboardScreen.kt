@@ -19,6 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -35,6 +37,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,9 +64,15 @@ import com.homehub.app.ui.theme.spacing
  * header) so its look matches every other top-level screen, with an
  * online/offline summary row in the header's `extraContent` slot. Device
  * cards lead with a tinted `DeviceIcon` avatar and a labeled `StatusBadge`;
- * the FAB is an extended "Add device" button instead of a bare `+`.
+ * the FAB is an extended "Add device" button instead of a bare "+".
  * Functionally unchanged from Phase 6/7 Step 1 — same ViewModel, same
  * commands — this is presentation only.
+ *
+ * Phase 7 Step 6: added a logout action in the header, gated behind a
+ * confirm dialog. Dashboard is the natural home for it — it's the app's
+ * one persistent top-level screen everything else navigates out from and
+ * back to, and there's no separate Profile/Settings screen (nor a clear
+ * need for one yet) to put it on instead.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,9 +81,11 @@ fun DashboardScreen(
     onViewActivity: () -> Unit,
     onViewRules: () -> Unit,
     onSwitchHousehold: () -> Unit,
+    onLogout: () -> Unit,
     viewModel: DashboardViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showLogoutConfirm by remember { mutableStateOf(false) }
 
     // Refresh whenever this screen comes back into view — e.g. returning
     // from Add Device, the rule builder, or the household switcher, so
@@ -127,6 +138,9 @@ fun DashboardScreen(
                     IconButton(onClick = onViewActivity) {
                         Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Activity", tint = MaterialTheme.colorScheme.onPrimary)
                     }
+                    IconButton(onClick = { showLogoutConfirm = true }) {
+                        Icon(Icons.Filled.Logout, contentDescription = "Log out", tint = MaterialTheme.colorScheme.onPrimary)
+                    }
                 },
                 extraContent = summaryContent
             )
@@ -172,6 +186,23 @@ fun DashboardScreen(
                 }
             }
         }
+    }
+
+    if (showLogoutConfirm) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirm = false },
+            title = { Text("Log out?") },
+            text = { Text("You'll need to sign in again to manage this household.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutConfirm = false
+                    onLogout()
+                }) { Text("Log out") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutConfirm = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 

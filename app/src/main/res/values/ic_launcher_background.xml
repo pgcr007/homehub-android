@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sampled from the HomeHub app icon artwork's own background. Kept as
+         its own file (rather than folded into a general colors.xml, which
+         doesn't exist yet) so it's obvious this one color is spoken for by
+         the adaptive icon and shouldn't be repurposed. -->
+    <color name="ic_launcher_background">#011E36</color>
+</resources>

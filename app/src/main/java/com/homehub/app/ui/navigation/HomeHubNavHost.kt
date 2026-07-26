@@ -15,6 +15,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.homehub.app.network.AuthSession
 import com.homehub.app.ui.screens.activity.ActivityFeedScreen
 import com.homehub.app.ui.screens.adddevice.AddDeviceScreen
 import com.homehub.app.ui.screens.dashboard.DashboardScreen
@@ -23,6 +24,7 @@ import com.homehub.app.ui.screens.household.MembersScreen
 import com.homehub.app.ui.screens.login.LoginScreen
 import com.homehub.app.ui.screens.onboarding.OnboardingPrefs
 import com.homehub.app.ui.screens.onboarding.OnboardingScreen
+import com.homehub.app.ui.screens.register.RegisterScreen
 import com.homehub.app.ui.screens.rules.CreateRuleScreen
 import com.homehub.app.ui.screens.rules.RulesListScreen
 
@@ -30,6 +32,8 @@ sealed class Destination(val route: String) {
     // Phase 7 Step 3
     data object Onboarding : Destination("onboarding")
     data object Login : Destination("login")
+    // Phase 7 Step 5: register was always live on the backend, no Android screen for it
+    data object Register : Destination("register")
     data object Dashboard : Destination("dashboard")
     data object AddDevice : Destination("add_device")
     data object ActivityFeed : Destination("activity_feed")
@@ -123,7 +127,27 @@ fun HomeHubNavHost(navController: NavHostController = rememberNavController()) {
                             launchSingleTop = true
                         }
                     }
+                },
+                onRegister = {
+                    debounced { navController.navigate(Destination.Register.route) { launchSingleTop = true } }
                 }
+            )
+        }
+        composable(Destination.Register.route) {
+            RegisterScreen(
+                onRegisterSuccess = {
+                    debounced {
+                        // Same target/backstack behavior as login success: clear back to
+                        // Dashboard so pressing back from Dashboard doesn't return to the
+                        // register form (Register itself sits on top of Login, which this
+                        // popUpTo also clears since it's inclusive of the whole auth stack).
+                        navController.navigate(Destination.Dashboard.route) {
+                            popUpTo(Destination.Login.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                },
+                onBackToLogin = { debounced { navController.popBackStack() } }
             )
         }
         composable(Destination.Dashboard.route) {
@@ -131,7 +155,20 @@ fun HomeHubNavHost(navController: NavHostController = rememberNavController()) {
                 onAddDevice = { debounced { navController.navigate(Destination.AddDevice.route) { launchSingleTop = true } } },
                 onViewActivity = { debounced { navController.navigate(Destination.ActivityFeed.route) { launchSingleTop = true } } },
                 onViewRules = { debounced { navController.navigate(Destination.RulesList.route) { launchSingleTop = true } } },
-                onSwitchHousehold = { debounced { navController.navigate(Destination.HouseholdSwitcher.route) { launchSingleTop = true } } }
+                onSwitchHousehold = { debounced { navController.navigate(Destination.HouseholdSwitcher.route) { launchSingleTop = true } } },
+                onLogout = {
+                    debounced {
+                        AuthSession.logout()
+                        // popUpTo(0) clears the *entire* back stack, including Dashboard
+                        // itself and the start destination — unlike login/register success
+                        // (which only pop back to Login), there's nothing above Dashboard
+                        // to preserve on the way out, and Onboarding shouldn't reappear.
+                        navController.navigate(Destination.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                }
             )
         }
         composable(Destination.AddDevice.route) {
