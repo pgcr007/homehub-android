@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,6 +49,11 @@ import com.homehub.app.ui.theme.spacing
  * and the conflict-warning callout now use `HomeHubCard` instead of a bare
  * `Card`. No logic changed from Phase 5/6 — same ViewModel, same rule
  * validation/conflict-check flow.
+ *
+ * Post-Phase 7: added a live plain-language `RulePreviewCard` pinned above
+ * the scrollable form, so the trigger/condition/action pickers translate
+ * into a readable sentence as you fill them in instead of only after
+ * creation.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,8 +79,90 @@ fun CreateRuleScreen(
         if (uiState.created) {
             CreatedConfirmation(warnings = uiState.warnings, onDone = onDone, modifier = Modifier.padding(padding))
         } else {
-            RuleForm(uiState = uiState, viewModel = viewModel, modifier = Modifier.padding(padding))
+            Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+                RulePreviewCard(
+                    uiState = uiState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = MaterialTheme.spacing.lg, vertical = MaterialTheme.spacing.sm)
+                )
+                RuleForm(uiState = uiState, viewModel = viewModel, modifier = Modifier.weight(1f))
+            }
         }
+    }
+}
+
+/**
+ * Live plain-language readout of the rule being assembled — mirrors the
+ * summary line shown on each row in RulesListScreen, but computed from the
+ * in-progress form state instead of a saved RuleDto, and rendered as it's
+ * built rather than only after creation. Kept outside the scrollable
+ * RuleForm so it stays pinned at the top while the picker fields below it
+ * scroll — the whole point is to see the sentence update without losing
+ * your place in the form.
+ */
+@Composable
+private fun RulePreviewCard(
+    uiState: CreateRuleUiState,
+    modifier: Modifier = Modifier
+) {
+    val preview = buildRulePreview(uiState)
+    HomeHubCard(modifier = modifier) {
+        Row(verticalAlignment = Alignment.Top) {
+            Icon(
+                Icons.Filled.Bolt,
+                contentDescription = null,
+                tint = if (preview != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                preview ?: "Fill in a trigger and an action to see a plain-language preview here",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (preview != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = MaterialTheme.spacing.sm)
+            )
+        }
+    }
+}
+
+private fun buildRulePreview(uiState: CreateRuleUiState): String? {
+    val triggerText = clausePreviewText(uiState.trigger, uiState.devices) ?: return null
+
+    // A half-filled condition (device picked, capability not yet) shouldn't
+    // block the trigger+action preview from showing — just leave it out
+    // until it's complete, same as an empty conditions list.
+    val conditionTexts = uiState.conditions.mapNotNull { clausePreviewText(it, uiState.devices) }
+
+    val actionTexts = uiState.actions.mapNotNull { actionPreviewText(it, uiState.devices) }
+    if (actionTexts.isEmpty()) return null
+
+    val conditionPart = if (conditionTexts.isNotEmpty()) {
+        " and " + conditionTexts.joinToString(" and ")
+    } else ""
+
+    return "When $triggerText$conditionPart, ${actionTexts.joinToString(", and ")}"
+}
+
+private fun clausePreviewText(form: ClauseForm, devices: List<DeviceDto>): String? {
+    val device = devices.find { it._id == form.deviceId } ?: return null
+    if (form.capability.isBlank()) return null
+    if (form.operator != "changed" && form.value.isBlank()) return null
+
+    return if (form.operator == "changed") {
+        "${device.name}'s ${form.capability} changes"
+    } else {
+        val opLabel = CLAUSE_OPERATORS.find { it.first == form.operator }?.second ?: form.operator
+        "${device.name}'s ${form.capability} $opLabel ${form.value}"
+    }
+}
+
+private fun actionPreviewText(form: ActionForm, devices: List<DeviceDto>): String? {
+    return if (form.type == "device_command") {
+        val device = devices.find { it._id == form.deviceId } ?: return null
+        if (form.capability.isBlank() || form.value.isBlank()) return null
+        "set ${device.name}'s ${form.capability} to ${form.value}"
+    } else {
+        if (form.message.isBlank()) return null
+        "send a notification saying \"${form.message.trim()}\""
     }
 }
 

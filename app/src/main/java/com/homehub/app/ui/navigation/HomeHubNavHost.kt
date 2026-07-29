@@ -16,6 +16,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.homehub.app.network.AuthSession
+import com.homehub.app.network.SessionStore
 import com.homehub.app.ui.screens.activity.ActivityFeedScreen
 import com.homehub.app.ui.screens.adddevice.AddDeviceScreen
 import com.homehub.app.ui.screens.dashboard.DashboardScreen
@@ -92,9 +93,21 @@ fun HomeHubNavHost(navController: NavHostController = rememberNavController()) {
     // this is intentionally NOT reactive to the flag changing later in this
     // same process, since the only writer (OnboardingScreen's onDone) also
     // immediately navigates away, so nothing here needs to react afterward.
+    //
+    // Persisted login sessions (post-Phase 7): SessionStore.restore() is
+    // read here too, same one-shot-at-first-composition treatment as
+    // onboarding — a killed/restarted process with a still-valid persisted
+    // token goes straight to Dashboard instead of forcing a re-login.
+    // Onboarding still takes priority over a restored session (an
+    // uninstalled-and-reinstalled app, or a fresh device restore, shouldn't
+    // skip it even if a session happened to persist).
     val context = LocalContext.current
     val startDestination = remember {
-        if (OnboardingPrefs.hasSeenOnboarding(context)) Destination.Login.route else Destination.Onboarding.route
+        when {
+            !OnboardingPrefs.hasSeenOnboarding(context) -> Destination.Onboarding.route
+            SessionStore.restore() -> Destination.Dashboard.route
+            else -> Destination.Login.route
+        }
     }
 
     NavHost(

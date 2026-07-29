@@ -97,6 +97,12 @@ dependencies {
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.8.5")
 
+    // Persisted login session: EncryptedSharedPreferences for the JWT/session
+    // data (see SessionStore.kt) — replaces the in-memory-only TokenHolder/
+    // UserHolder/HouseholdHolder that previously forced a re-login on every
+    // process death.
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
     // Networking
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")

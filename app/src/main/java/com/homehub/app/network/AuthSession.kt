@@ -3,13 +3,14 @@ package com.homehub.app.network
 import com.homehub.app.realtime.SocketManager
 
 /**
- * Phase 7 Step 6. Nothing in this app persists auth to disk yet — TokenHolder's
- * own doc comment notes it's in-memory only until EncryptedSharedPreferences
- * lands — so "logout" is just clearing the three in-memory holders that
- * together define "signed in" (token, active household, user id) plus
- * tearing down the live socket connection, which is keyed to exactly that
- * state (see SocketManager.connect(): it reads TokenHolder.token and
- * HouseholdHolder.activeHouseholdId directly).
+ * Phase 7 Step 6, updated post-Phase 7 once SessionStore landed. "Logout"
+ * is clearing the three in-memory holders that together define "signed in"
+ * (token, active household, user id), tearing down the live socket
+ * connection (keyed to exactly that state — see SocketManager.connect(),
+ * which reads TokenHolder.token and HouseholdHolder.activeHouseholdId
+ * directly), and clearing the on-disk persisted session so a killed/
+ * restarted process doesn't restore straight back into an account the
+ * user explicitly signed out of.
  *
  * No server-side call — there's no session/refresh-token to revoke
  * server-side (see authController.js: register/login just hand back a JWT,
@@ -28,5 +29,6 @@ object AuthSession {
         HouseholdHolder.activeHouseholdName = null
         HouseholdHolder.activeHouseholdRole = null
         UserHolder.userId = null
+        SessionStore.clear()
     }
 }

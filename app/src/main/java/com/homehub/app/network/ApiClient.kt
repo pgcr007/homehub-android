@@ -9,8 +9,11 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 /**
- * Holds the bearer token in memory for the session.
- * Phase 2+ will back this with EncryptedSharedPreferences for persistence across app restarts.
+ * Holds the bearer token in memory for the current process. Backed by
+ * SessionStore (EncryptedSharedPreferences) as of post-Phase 7 — restored
+ * into this holder at app startup by SessionStore.restore() so a killed/
+ * restarted process doesn't force a re-login, but every request still
+ * reads the token from here rather than from disk directly.
  */
 object TokenHolder {
     @Volatile
@@ -22,8 +25,9 @@ object TokenHolder {
  * requires an X-Household-Id header — this is the Android-side equivalent
  * of TokenHolder above. Set via bootstrapActiveHousehold() right after
  * login, and updated again by the household switcher (Step 4) when the
- * user picks a different household. In-memory only for now, same
- * persistence caveat as TokenHolder.
+ * user picks a different household. Persisted the same way as TokenHolder
+ * (see SessionStore) so the active household survives a process restart
+ * too, not just the token.
  */
 object HouseholdHolder {
     @Volatile

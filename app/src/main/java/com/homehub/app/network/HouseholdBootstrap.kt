@@ -47,4 +47,11 @@ fun applyActiveHousehold(household: HouseholdDto) {
     HouseholdHolder.activeHouseholdId = household._id
     HouseholdHolder.activeHouseholdName = household.name
     HouseholdHolder.activeHouseholdRole = household.myRole
+    // Persisted login sessions: this is the one spot every flow that sets
+    // an active household passes through (initial bootstrap after login/
+    // register, and the household switcher), and by the time it runs here
+    // TokenHolder/UserHolder are already set too — so a single persist()
+    // call captures the complete, restorable session regardless of which
+    // flow got it here.
+    SessionStore.persist()
 }

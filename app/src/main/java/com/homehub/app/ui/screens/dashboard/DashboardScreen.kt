@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.SensorDoor
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,6 +52,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.homehub.app.network.DeviceDto
 import com.homehub.app.network.HouseholdHolder
 import com.homehub.app.ui.components.DeviceIcon
+import com.homehub.app.ui.components.EmptyState
 import com.homehub.app.ui.components.ErrorMessage
 import com.homehub.app.ui.components.HomeHubCard
 import com.homehub.app.ui.components.HomeHubHeader
@@ -162,6 +164,12 @@ fun DashboardScreen(
                     ErrorMessage(
                         "Couldn't load dashboard: ${uiState.error}",
                         modifier = Modifier.align(Alignment.Center).padding(MaterialTheme.spacing.xl)
+                    )
+                }
+                uiState.devices.isEmpty() -> {
+                    EmptyState(
+                        icon = Icons.Filled.SensorDoor,
+                        message = "No devices yet — tap \"Add device\" to connect your first one",
                     )
                 }
                 else -> {
