@@ -18,6 +18,9 @@ interface DeviceService {
     @POST("api/devices/{id}/command")
     suspend fun sendCommand(@Path("id") deviceId: String, @Body command: Map<String, @JvmSuppressWildcards Any>): CommandResponse
 
+    @POST("api/devices/bulk-command")
+    suspend fun bulkCommand(@Body request: BulkCommandRequest): BulkCommandResponse
+
     @POST("api/devices")
     suspend fun createDevice(@Body request: CreateDeviceRequest): CreateDeviceResponse
 

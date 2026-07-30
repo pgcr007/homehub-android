@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.SensorDoor
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -88,6 +89,7 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showLogoutConfirm by remember { mutableStateOf(false) }
+    var showTurnOffAllConfirm by remember { mutableStateOf(false) }
 
     // Refresh whenever this screen comes back into view — e.g. returning
     // from Add Device, the rule builder, or the household switcher, so
@@ -134,6 +136,12 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
+                    val powerDeviceIds = uiState.devices.filter { it.capabilities.contains("power") }.map { it._id }
+                    if (powerDeviceIds.isNotEmpty()) {
+                        IconButton(onClick = { showTurnOffAllConfirm = true }) {
+                            Icon(Icons.Filled.PowerSettingsNew, contentDescription = "Turn off all devices", tint = MaterialTheme.colorScheme.onPrimary)
+                        }
+                    }
                     TextButton(onClick = onViewRules) {
                         Text("Rules", color = MaterialTheme.colorScheme.onPrimary)
                     }
@@ -182,12 +190,22 @@ fun DashboardScreen(
                         items(uiState.rooms) { room ->
                             val roomDevices = uiState.devices.filter { it.room == room._id }
                             if (roomDevices.isNotEmpty()) {
-                                RoomSection(title = room.name, devices = roomDevices, onCommand = viewModel::sendCommand)
+                                RoomSection(
+                                    title = room.name,
+                                    devices = roomDevices,
+                                    onCommand = viewModel::sendCommand,
+                                    onTurnOffAll = { ids -> viewModel.sendBulkCommand(ids, mapOf("power" to "off")) }
+                                )
                             }
                         }
                         if (unassigned.isNotEmpty()) {
                             item {
-                                RoomSection(title = "Unassigned", devices = unassigned, onCommand = viewModel::sendCommand)
+                                RoomSection(
+                                    title = "Unassigned",
+                                    devices = unassigned,
+                                    onCommand = viewModel::sendCommand,
+                                    onTurnOffAll = { ids -> viewModel.sendBulkCommand(ids, mapOf("power" to "off")) }
+                                )
                             }
                         }
                     }
@@ -209,6 +227,28 @@ fun DashboardScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutConfirm = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // Bulk device actions (post-Phase 7): unlike the per-room "Turn off
+    // all" (small blast radius, easy to undo with one switch tap), this
+    // one hits every powered device across the whole household in one go —
+    // worth a confirm, same treatment as logout above.
+    if (showTurnOffAllConfirm) {
+        val powerDeviceIds = uiState.devices.filter { it.capabilities.contains("power") }.map { it._id }
+        AlertDialog(
+            onDismissRequest = { showTurnOffAllConfirm = false },
+            title = { Text("Turn off all devices?") },
+            text = { Text("This will turn off every powered device in this household (${powerDeviceIds.size} device${if (powerDeviceIds.size == 1) "" else "s"}).") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showTurnOffAllConfirm = false
+                    viewModel.sendBulkCommand(powerDeviceIds, mapOf("power" to "off"))
+                }) { Text("Turn off all") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTurnOffAllConfirm = false }) { Text("Cancel") }
             }
         )
     }
@@ -237,17 +277,37 @@ private fun SummaryPill(count: Int, label: String, dotColor: androidx.compose.ui
 private fun RoomSection(
     title: String,
     devices: List<DeviceDto>,
-    onCommand: (DeviceDto, Map<String, Any>) -> Unit
+    onCommand: (DeviceDto, Map<String, Any>) -> Unit,
+    onTurnOffAll: (List<String>) -> Unit
 ) {
     Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.width(MaterialTheme.spacing.xs))
-            Text(
-                "· ${devices.size}",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.width(MaterialTheme.spacing.xs))
+                Text(
+                    "· ${devices.size}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Bulk device actions (post-Phase 7): "turn off all in this
+            // room" for the property-manager persona clearing out a unit
+            // between guests, without tapping every switch one at a time.
+            // Only shown when there's actually something to turn off —
+            // sensors/contact devices don't have a "power" capability, so a
+            // room of only those would show a button that does nothing.
+            val powerDeviceIds = devices.filter { it.capabilities.contains("power") }.map { it._id }
+            if (powerDeviceIds.isNotEmpty()) {
+                TextButton(onClick = { onTurnOffAll(powerDeviceIds) }) {
+                    Text("Turn off all")
+                }
+            }
         }
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.sm))
 

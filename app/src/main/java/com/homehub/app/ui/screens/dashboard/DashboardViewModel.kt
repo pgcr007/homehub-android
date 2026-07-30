@@ -3,6 +3,7 @@ package com.homehub.app.ui.screens.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.homehub.app.network.ApiClient
+import com.homehub.app.network.BulkCommandRequest
 import com.homehub.app.network.DeviceDto
 import com.homehub.app.network.RoomDto
 import com.homehub.app.realtime.SocketManager
@@ -88,6 +89,30 @@ class DashboardViewModel : ViewModel() {
                 // being *sent* isn't the same claim as the device *applying* it.
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "command failed: ${e.message}") }
+            }
+        }
+    }
+
+    /**
+     * Bulk device actions (post-Phase 7): fans one command out to every id
+     * in [deviceIds] via a single POST /api/devices/bulk-command call
+     * instead of N individual sendCommand() round trips. Callers (the
+     * per-room and whole-household "Turn off all" actions in
+     * DashboardScreen) are expected to have already filtered deviceIds down
+     * to devices that actually support the command's capability — this
+     * doesn't re-filter, it just fans out.
+     *
+     * Same no-optimistic-update stance as sendCommand: real state comes
+     * back through the socket as each device actually applies the change,
+     * not from this call succeeding.
+     */
+    fun sendBulkCommand(deviceIds: List<String>, command: Map<String, Any>) {
+        if (deviceIds.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                ApiClient.deviceService.bulkCommand(BulkCommandRequest(deviceIds, command))
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "bulk command failed: ${e.message}") }
             }
         }
     }

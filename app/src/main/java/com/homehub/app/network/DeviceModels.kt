@@ -22,6 +22,23 @@ data class RoomsResponse(val rooms: List<RoomDto>)
 data class DevicesResponse(val devices: List<DeviceDto>)
 data class CommandResponse(val status: String, val topic: String, val command: Map<String, Any?>)
 
+data class BulkCommandRequest(
+    val deviceIds: List<String>,
+    val command: Map<String, @JvmSuppressWildcards Any>
+)
+data class BulkCommandResult(
+    val deviceId: String,
+    val status: String, // "sent" | "skipped" | "not_found" | "failed"
+    val reason: String? = null,
+    val topic: String? = null
+)
+data class BulkCommandResponse(
+    val status: String,
+    val sentCount: Int,
+    val total: Int,
+    val results: List<BulkCommandResult>
+)
+
 data class EventDeviceRef(val _id: String, val name: String, val type: String, val room: String?)
 
 data class DeviceTypeOption(
