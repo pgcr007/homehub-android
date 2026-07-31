@@ -49,11 +49,6 @@ import com.homehub.app.ui.theme.spacing
  * and the conflict-warning callout now use `HomeHubCard` instead of a bare
  * `Card`. No logic changed from Phase 5/6 — same ViewModel, same rule
  * validation/conflict-check flow.
- *
- * Post-Phase 7: added a live plain-language `RulePreviewCard` pinned above
- * the scrollable form, so the trigger/condition/action pickers translate
- * into a readable sentence as you fill them in instead of only after
- * creation.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -188,6 +183,31 @@ private fun RuleForm(
             singleLine = true
         )
 
+        // Rule templates (post-Phase 7): one tap fills in the trigger/action
+        // shape for a common pattern, leaving only device selection — see
+        // CreateRuleViewModel.applyTemplate() for why only these three
+        // patterns are offered (not "time-based" or "offline-alert" from
+        // the original brainstorm, neither of which the rule engine
+        // actually supports today).
+        Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)) {
+            Text("Start from a template (optional)", style = MaterialTheme.typography.labelLarge)
+            RULE_TEMPLATES.forEach { template ->
+                OutlinedButton(
+                    onClick = { viewModel.applyTemplate(template) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(template.label, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            template.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
         Text("Trigger", style = MaterialTheme.typography.titleMedium)
         ClauseEditor(
             devices = uiState.devices,
@@ -274,7 +294,16 @@ private fun ClauseEditor(
             selectedLabel = selectedDevice?.name ?: "Select a device",
             options = devices,
             optionLabel = { it.name },
-            onSelect = { onChange(form.copy(deviceId = it._id, capability = "")) }
+            // Keep the current capability if the newly picked device still
+            // supports it (e.g. a template pre-filled "motion" before any
+            // device was chosen) — only clear it if it's no longer valid
+            // for this device. Without this, applying a template and then
+            // picking a device would silently wipe the very capability the
+            // template just set.
+            onSelect = { device ->
+                val keptCapability = form.capability.takeIf { it.isNotBlank() && device.capabilities.contains(it) } ?: ""
+                onChange(form.copy(deviceId = device._id, capability = keptCapability))
+            }
         )
         LabeledDropdown(
             label = "Capability",
@@ -336,7 +365,13 @@ private fun ActionEditor(
                 selectedLabel = selectedDevice?.name ?: "Select a device",
                 options = devices,
                 optionLabel = { it.name },
-                onSelect = { onChange(form.copy(deviceId = it._id, capability = "")) }
+                // Same reasoning as ClauseEditor's device dropdown above —
+                // keep a template-prefilled capability if it's still valid
+                // for the newly picked device.
+                onSelect = { device ->
+                    val keptCapability = form.capability.takeIf { it.isNotBlank() && device.capabilities.contains(it) } ?: ""
+                    onChange(form.copy(deviceId = device._id, capability = keptCapability))
+                }
             )
             LabeledDropdown(
                 label = "Capability",

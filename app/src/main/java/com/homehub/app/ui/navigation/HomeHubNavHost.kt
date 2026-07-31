@@ -25,6 +25,7 @@ import com.homehub.app.ui.screens.household.MembersScreen
 import com.homehub.app.ui.screens.login.LoginScreen
 import com.homehub.app.ui.screens.onboarding.OnboardingPrefs
 import com.homehub.app.ui.screens.onboarding.OnboardingScreen
+import com.homehub.app.ui.screens.profile.ProfileScreen
 import com.homehub.app.ui.screens.register.RegisterScreen
 import com.homehub.app.ui.screens.rules.CreateRuleScreen
 import com.homehub.app.ui.screens.rules.RulesListScreen
@@ -43,6 +44,7 @@ sealed class Destination(val route: String) {
     // Phase 6 Step 4
     data object HouseholdSwitcher : Destination("household_switcher")
     data object Members : Destination("members")
+    data object Profile : Destination("profile")
 }
 
 // Phase 7 Step 4: shared transition specs so every screen slides in the same
@@ -169,6 +171,7 @@ fun HomeHubNavHost(navController: NavHostController = rememberNavController()) {
                 onViewActivity = { debounced { navController.navigate(Destination.ActivityFeed.route) { launchSingleTop = true } } },
                 onViewRules = { debounced { navController.navigate(Destination.RulesList.route) { launchSingleTop = true } } },
                 onSwitchHousehold = { debounced { navController.navigate(Destination.HouseholdSwitcher.route) { launchSingleTop = true } } },
+                onOpenProfile = { debounced { navController.navigate(Destination.Profile.route) { launchSingleTop = true } } },
                 onLogout = {
                     debounced {
                         AuthSession.logout()
@@ -217,6 +220,12 @@ fun HomeHubNavHost(navController: NavHostController = rememberNavController()) {
         composable(Destination.Members.route) {
             MembersScreen(
                 onBack = { debounced { navController.popBackStack() } }
+            )
+        }
+        composable(Destination.Profile.route) {
+            ProfileScreen(
+                onBack = { debounced { navController.popBackStack() } },
+                onSwitchHousehold = { debounced { navController.navigate(Destination.HouseholdSwitcher.route) { launchSingleTop = true } } }
             )
         }
     }

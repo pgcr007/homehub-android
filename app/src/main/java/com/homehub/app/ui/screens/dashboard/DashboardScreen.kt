@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SensorDoor
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -84,6 +85,7 @@ fun DashboardScreen(
     onViewActivity: () -> Unit,
     onViewRules: () -> Unit,
     onSwitchHousehold: () -> Unit,
+    onOpenProfile: () -> Unit,
     onLogout: () -> Unit,
     viewModel: DashboardViewModel = viewModel()
 ) {
@@ -136,6 +138,9 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onOpenProfile) {
+                        Icon(Icons.Filled.Person, contentDescription = "Profile", tint = MaterialTheme.colorScheme.onPrimary)
+                    }
                     val powerDeviceIds = uiState.devices.filter { it.capabilities.contains("power") }.map { it._id }
                     if (powerDeviceIds.isNotEmpty()) {
                         IconButton(onClick = { showTurnOffAllConfirm = true }) {
