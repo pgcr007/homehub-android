@@ -17,16 +17,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SensorDoor
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +59,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.homehub.app.network.DeviceDto
 import com.homehub.app.network.HouseholdHolder
 import com.homehub.app.ui.components.DeviceIcon
+import com.homehub.app.ui.components.deviceAccentColor
 import com.homehub.app.ui.components.EmptyState
 import com.homehub.app.ui.components.ErrorMessage
 import com.homehub.app.ui.components.HomeHubCard
@@ -112,6 +118,7 @@ fun DashboardScreen(
             val onlineCount = devices.count { it.status == "online" }
             val offlineCount = devices.count { it.status == "offline" }
             val unknownCount = devices.size - onlineCount - offlineCount
+            var showOverflowMenu by remember { mutableStateOf(false) }
 
             val summaryContent: (@Composable () -> Unit)? = if (devices.isNotEmpty()) {
                 @Composable {
@@ -130,6 +137,20 @@ fun DashboardScreen(
                 null
             }
 
+            // Phase 8 polish: the header used to lay out five separate
+            // IconButtons (profile, power, rules, activity, logout) in a
+            // single Row. On narrower phones that row simply ran out of
+            // width — Compose doesn't wrap or shrink a Row's children by
+            // default, so whichever icon landed last (logout) got pushed
+            // off the visible edge instead of showing a scrollbar or
+            // clipping visibly. A fixed number of icons is never truly
+            // "safe": longer household names, larger system font scales,
+            // or a future added action can all reproduce the same overflow.
+            // Collapsing everything except the one contextual, frequently
+            // used action (turn off all) into a single overflow menu keeps
+            // the header at a constant, predictable width no matter what.
+            val powerDeviceIds = devices.filter { it.capabilities.contains("power") }.map { it._id }
+
             HomeHubHeader(
                 title = HouseholdHolder.activeHouseholdName ?: "HomeHub",
                 navigationIcon = {
@@ -138,23 +159,59 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onOpenProfile) {
-                        Icon(Icons.Filled.Person, contentDescription = "Profile", tint = MaterialTheme.colorScheme.onPrimary)
-                    }
-                    val powerDeviceIds = uiState.devices.filter { it.capabilities.contains("power") }.map { it._id }
                     if (powerDeviceIds.isNotEmpty()) {
                         IconButton(onClick = { showTurnOffAllConfirm = true }) {
                             Icon(Icons.Filled.PowerSettingsNew, contentDescription = "Turn off all devices", tint = MaterialTheme.colorScheme.onPrimary)
                         }
                     }
-                    TextButton(onClick = onViewRules) {
-                        Text("Rules", color = MaterialTheme.colorScheme.onPrimary)
-                    }
-                    IconButton(onClick = onViewActivity) {
-                        Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Activity", tint = MaterialTheme.colorScheme.onPrimary)
-                    }
-                    IconButton(onClick = { showLogoutConfirm = true }) {
-                        Icon(Icons.Filled.Logout, contentDescription = "Log out", tint = MaterialTheme.colorScheme.onPrimary)
+                    Box {
+                        IconButton(onClick = { showOverflowMenu = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = "More options", tint = MaterialTheme.colorScheme.onPrimary)
+                        }
+                        DropdownMenu(
+                            expanded = showOverflowMenu,
+                            onDismissRequest = { showOverflowMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Profile") },
+                                leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    onOpenProfile()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Rules") },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Rule, contentDescription = null) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    onViewRules()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Activity") },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    onViewActivity()
+                                }
+                            )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text("Log out", color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Filled.Logout,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showLogoutConfirm = true
+                                }
+                            )
+                        }
                     }
                 },
                 extraContent = summaryContent
@@ -345,7 +402,10 @@ private fun DeviceCard(
     device: DeviceDto,
     onCommand: (DeviceDto, Map<String, Any>) -> Unit
 ) {
-    HomeHubCard(modifier = Modifier.fillMaxWidth()) {
+    HomeHubCard(
+        modifier = Modifier.fillMaxWidth(),
+        accentColor = deviceAccentColor(device.capabilities)
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             DeviceIcon(capabilities = device.capabilities)
             Spacer(modifier = Modifier.width(MaterialTheme.spacing.sm))
