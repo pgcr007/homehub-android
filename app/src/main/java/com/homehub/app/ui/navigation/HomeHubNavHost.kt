@@ -29,6 +29,7 @@ import com.homehub.app.ui.screens.profile.ProfileScreen
 import com.homehub.app.ui.screens.register.RegisterScreen
 import com.homehub.app.ui.screens.rules.CreateRuleScreen
 import com.homehub.app.ui.screens.rules.RulesListScreen
+import com.homehub.app.ui.screens.usage.UsageScreen
 
 sealed class Destination(val route: String) {
     // Phase 7 Step 3
@@ -42,6 +43,9 @@ sealed class Destination(val route: String) {
     data object RulesList : Destination("rules_list")
     data object CreateRule : Destination("create_rule")
     // Phase 6 Step 4
+
+    data object Usage : Destination("usage")
+
     data object HouseholdSwitcher : Destination("household_switcher")
     data object Members : Destination("members")
     data object Profile : Destination("profile")
@@ -170,6 +174,7 @@ fun HomeHubNavHost(navController: NavHostController = rememberNavController()) {
                 onAddDevice = { debounced { navController.navigate(Destination.AddDevice.route) { launchSingleTop = true } } },
                 onViewActivity = { debounced { navController.navigate(Destination.ActivityFeed.route) { launchSingleTop = true } } },
                 onViewRules = { debounced { navController.navigate(Destination.RulesList.route) { launchSingleTop = true } } },
+                onViewUsage = { debounced { navController.navigate(Destination.Usage.route) { launchSingleTop = true } } },
                 onSwitchHousehold = { debounced { navController.navigate(Destination.HouseholdSwitcher.route) { launchSingleTop = true } } },
                 onOpenProfile = { debounced { navController.navigate(Destination.Profile.route) { launchSingleTop = true } } },
                 onLogout = {
@@ -210,6 +215,13 @@ fun HomeHubNavHost(navController: NavHostController = rememberNavController()) {
                 onBack = { debounced { navController.popBackStack() } }
             )
         }
+
+        composable(Destination.Usage.route) {
+            UsageScreen(
+                onBack = { debounced { navController.popBackStack() } }
+            )
+        }
+
         composable(Destination.HouseholdSwitcher.route) {
             HouseholdSwitcherScreen(
                 onBack = { debounced { navController.popBackStack() } },

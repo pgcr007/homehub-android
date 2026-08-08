@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SensorDoor
@@ -90,6 +91,7 @@ fun DashboardScreen(
     onAddDevice: () -> Unit,
     onViewActivity: () -> Unit,
     onViewRules: () -> Unit,
+    onViewUsage: () -> Unit,
     onSwitchHousehold: () -> Unit,
     onOpenProfile: () -> Unit,
     onLogout: () -> Unit,
@@ -186,6 +188,14 @@ fun DashboardScreen(
                                 onClick = {
                                     showOverflowMenu = false
                                     onViewRules()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Usage") },
+                                leadingIcon = { Icon(Icons.Filled.BarChart, contentDescription = null) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    onViewUsage()
                                 }
                             )
                             DropdownMenuItem(

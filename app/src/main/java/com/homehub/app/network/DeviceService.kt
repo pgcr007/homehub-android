@@ -30,6 +30,9 @@ interface DeviceService {
     @GET("api/events")
     suspend fun listEvents(@Query("limit") limit: Int = 50): EventsResponse
 
+    @GET("api/insights/usage")
+    suspend fun getUsage(@Query("days") days: Int = 7): UsageResponse
+
     @GET("api/rules")
     suspend fun listRules(): RulesResponse
 
