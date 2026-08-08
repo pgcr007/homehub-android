@@ -117,6 +117,7 @@ data class HomeHubExtendedColors(
     val roleOwner: Color,
     val roleManager: Color,
     val roleMember: Color,
+    val roleGuest: Color
 )
 
 val LightExtendedColors = HomeHubExtendedColors(
@@ -126,6 +127,7 @@ val LightExtendedColors = HomeHubExtendedColors(
     roleOwner = Blue40,
     roleManager = Teal40,
     roleMember = Slate40,
+    roleGuest = Color(0xFF9C6B1F),
 )
 
 val DarkExtendedColors = HomeHubExtendedColors(
@@ -135,6 +137,7 @@ val DarkExtendedColors = HomeHubExtendedColors(
     roleOwner = Blue80,
     roleManager = Teal80,
     roleMember = Slate80,
+    roleGuest = Color(0xFFE0B584),
 )
 
 val LocalHomeHubColors = staticCompositionLocalOf { LightExtendedColors }

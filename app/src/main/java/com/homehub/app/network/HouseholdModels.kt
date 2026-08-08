@@ -37,7 +37,8 @@ data class MemberUserDto(
 // {_id, email, name} object rather than a bare ObjectId.
 data class HouseholdMemberDto(
     val user: MemberUserDto,
-    val role: String
+    val role: String,
+    val expiresAt: String? = null
 )
 
 data class HouseholdDetailDto(
@@ -53,7 +54,7 @@ data class HouseholdDetailResponse(val household: HouseholdDetailDto, val myRole
 
 // POST /api/households/current/members returns just { household } (no
 // top-level myRole — inviting someone doesn't change your own role).
-data class AddMemberRequest(val email: String, val role: String = "member")
+data class AddMemberRequest(val email: String, val role: String = "member", val expiresAt: String? = null)
 data class AddMemberResponse(val household: HouseholdDetailDto)
 
 data class RemoveMemberResponse(val status: String)

@@ -52,12 +52,14 @@ class MembersViewModel : ViewModel() {
     // "Invite" in the UI sense — the backend adds an existing account by
     // email (see householdController.addMember's own comment: no
     // invite-email flow yet), it doesn't send anything to that address.
-    fun addMember(email: String, role: String) {
+    fun addMember(email: String, role: String, expiresAtIso: String? = null) {
         if (email.isBlank()) return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isInviting = true, error = null)
             try {
-                val response = ApiClient.householdService.addMember(AddMemberRequest(email.trim(), role))
+                val response = ApiClient.householdService.addMember(
+                    AddMemberRequest(email.trim(), role, expiresAtIso)
+                )
                 _uiState.value = _uiState.value.copy(isInviting = false, household = response.household)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(

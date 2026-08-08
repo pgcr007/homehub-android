@@ -39,6 +39,8 @@ import com.homehub.app.ui.components.ErrorMessage
 import com.homehub.app.ui.components.HomeHubCard
 import com.homehub.app.ui.components.HomeHubHeader
 import com.homehub.app.ui.theme.spacing
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 
 /**
  * Phase 6 Step 4. Lists every household the signed-in user belongs to,
@@ -199,20 +201,41 @@ private fun CreateHouseholdDialog(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Name") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Text("Type", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = MaterialTheme.spacing.md))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
+                Text(
+                    "Type",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(top = MaterialTheme.spacing.lg, bottom = MaterialTheme.spacing.xs)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)
+                ) {
                     typeOptions.forEach { option ->
                         val selected = option == type
-                        TextButton(onClick = { type = option }) {
-                            Text(
-                                option,
-                                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        FilterChip(
+                            selected = selected,
+                            onClick = { type = option },
+                            label = { Text(option.replaceFirstChar { it.uppercase() }) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                             )
-                        }
+                        )
                     }
                 }
+                Text(
+                    if (type == "unit") {
+                        "A single property-manager-owned rental or office unit."
+                    } else {
+                        "A single home for personal, everyday use."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = MaterialTheme.spacing.sm)
+                )
             }
         },
         confirmButton = {

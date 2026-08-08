@@ -44,6 +44,13 @@ import com.homehub.app.ui.components.InitialsAvatar
 import com.homehub.app.ui.components.RoleBadge
 import com.homehub.app.ui.theme.homeHubColors
 import com.homehub.app.ui.theme.spacing
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.ui.graphics.Color
 
 /**
  * Phase 6 Step 4. Shows the active household's members + roles. Add/remove
@@ -139,8 +146,8 @@ fun MembersScreen(
             allowOwnerRole = uiState.myRole == "owner",
             isSubmitting = uiState.isInviting,
             onDismiss = { showAddDialog = false },
-            onConfirm = { email, role ->
-                viewModel.addMember(email, role)
+            onConfirm = { email, role, expiresAtIso ->
+                viewModel.addMember(email, role, expiresAtIso)
                 showAddDialog = false
             }
         )
@@ -175,7 +182,27 @@ private fun MemberRow(
     val avatarTint = when (member.role) {
         "owner" -> colors.roleOwner
         "manager" -> colors.roleManager
+        "guest" -> colors.roleGuest
         else -> colors.roleMember
+    }
+    // Parsed client-side purely for display — access enforcement is always
+    // server-side (Household.roleOf), this is just so a manager sees "3
+    // days left" instead of a raw ISO timestamp.
+    val expiryLabel = remember(member.expiresAt) {
+        member.expiresAt?.let { iso ->
+            try {
+                val expiry = java.time.Instant.parse(iso)
+                val now = java.time.Instant.now()
+                if (expiry.isBefore(now)) {
+                    "Expired"
+                } else {
+                    val daysLeft = java.time.Duration.between(now, expiry).toDays()
+                    if (daysLeft < 1) "Expires today" else "Expires in ${daysLeft}d"
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
     }
     HomeHubCard(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -188,7 +215,17 @@ private fun MemberRow(
                 Spacer(modifier = Modifier.width(MaterialTheme.spacing.sm))
                 Column {
                     Text(member.user.name ?: member.user.email, style = MaterialTheme.typography.bodyLarge)
-                    RoleBadge(role = member.role, modifier = Modifier.padding(top = MaterialTheme.spacing.xs))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RoleBadge(role = member.role, modifier = Modifier.padding(top = MaterialTheme.spacing.xs))
+                        if (expiryLabel != null) {
+                            Text(
+                                expiryLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (expiryLabel == "Expired") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = MaterialTheme.spacing.sm, top = MaterialTheme.spacing.xs)
+                            )
+                        }
+                    }
                 }
             }
             if (canRemove) {
@@ -200,52 +237,130 @@ private fun MemberRow(
     }
 }
 
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun AddMemberDialog(
     allowOwnerRole: Boolean,
     isSubmitting: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: (email: String, role: String) -> Unit
+    // role == "guest" always carries a non-null expiresAtIso; every other
+    // role always passes null.
+    onConfirm: (email: String, role: String, expiresAtIso: String?) -> Unit
 ) {
+    val homeHubColors = MaterialTheme.homeHubColors
     var email by remember { mutableStateOf("") }
     // Mirrors requireHousehold.js: only an owner can grant the 'owner' role
-    // to someone else.
-    val roleOptions = if (allowOwnerRole) listOf("member", "manager", "owner") else listOf("member", "manager")
+    // to someone else. 'guest' is available to anyone who can open this
+    // dialog (manager+), same as 'member'.
+    val roleOptions = if (allowOwnerRole) {
+        listOf("member", "manager", "owner", "guest")
+    } else {
+        listOf("member", "manager", "guest")
+    }
     var role by remember { mutableStateOf(roleOptions.first()) }
+    // Guest-only: how many days from now access expires. Fixed set of
+    // durations (checkout-length stays, not arbitrary dates) matches the
+    // "quick Airbnb turnover" use case this role exists for.
+    var guestDurationDays by remember { mutableStateOf(3) }
+    val guestDurationOptions = listOf(1, 3, 7, 14)
+
+    fun roleColor(option: String): Color = when (option) {
+        "owner" -> homeHubColors.roleOwner
+        "manager" -> homeHubColors.roleManager
+        "guest" -> homeHubColors.roleGuest
+        else -> homeHubColors.roleMember
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add member") },
         text = {
-            Column {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+            ) {
                 Text(
                     "They need an existing HomeHub account — this adds them by email, it doesn't send an invite.",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
                     label = { Text("Email") },
-                    modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.md)
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = MaterialTheme.spacing.md)
                 )
-                Text("Role", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = MaterialTheme.spacing.md))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
+
+                Text(
+                    "Role",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(top = MaterialTheme.spacing.lg, bottom = MaterialTheme.spacing.xs)
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)
+                ) {
                     roleOptions.forEach { option ->
                         val selected = option == role
-                        TextButton(onClick = { role = option }) {
-                            Text(
-                                option,
-                                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        FilterChip(
+                            selected = selected,
+                            onClick = { role = option },
+                            label = { Text(option.replaceFirstChar { it.uppercase() }) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = roleColor(option),
+                                selectedLabelColor = Color.White
+                            )
+                        )
+                    }
+                }
+
+                if (role == "guest") {
+                    Text(
+                        "Access length",
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(top = MaterialTheme.spacing.lg, bottom = MaterialTheme.spacing.xs)
+                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+                        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)
+                    ) {
+                        guestDurationOptions.forEach { days ->
+                            val selected = days == guestDurationDays
+                            FilterChip(
+                                selected = selected,
+                                onClick = { guestDurationDays = days },
+                                label = { Text("${days}d") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = homeHubColors.roleGuest,
+                                    selectedLabelColor = Color.White
+                                )
                             )
                         }
                     }
+                    Text(
+                        "Access is revoked automatically after $guestDurationDays day${if (guestDurationDays == 1) "" else "s"}.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = MaterialTheme.spacing.sm)
+                    )
                 }
             }
         },
         confirmButton = {
             TextButton(
                 enabled = email.isNotBlank() && !isSubmitting,
-                onClick = { onConfirm(email.trim(), role) }
+                onClick = {
+                    val expiresAtIso = if (role == "guest") {
+                        java.time.Instant.now()
+                            .plus(guestDurationDays.toLong(), java.time.temporal.ChronoUnit.DAYS)
+                            .toString()
+                    } else null
+                    onConfirm(email.trim(), role, expiresAtIso)
+                }
             ) { Text("Add") }
         },
         dismissButton = {

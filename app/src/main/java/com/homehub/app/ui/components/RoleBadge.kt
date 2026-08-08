@@ -26,6 +26,7 @@ fun RoleBadge(role: String, modifier: Modifier = Modifier) {
     val color = when (role) {
         "owner" -> colors.roleOwner
         "manager" -> colors.roleManager
+        "guest" -> colors.roleGuest
         else -> colors.roleMember
     }
     Text(
